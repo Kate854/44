@@ -65,7 +65,8 @@ const visibleProducts = () => baselineProducts().filter(product=>state.quantitie
 const groutShortage = () => Math.max(0,2-state.quantities.grout);
 const missingCount = () => groutShortage()+Math.max(0,2-(state.appliedChoice?state.quantities[state.appliedChoice]:0));
 const bundleComplete = () => state.quantities.grout>=2&&state.appliedChoice&&state.quantities[state.appliedChoice]>=2;
-const draftComplete = () => (groutShortage()===0||state.draft.grout)&&Boolean(state.draft.alternative);
+const draftComplete = () => (groutShortage()===0||state.draft.grout)
+  &&(Boolean(state.draft.alternative)||Boolean(state.appliedChoice&&state.quantities[state.appliedChoice]>=2));
 const optionQuantity = option => option.productId==='grout'?groutShortage()
   :Math.max(0,2-state.quantities[option.productId]);
 const currentPriceKopecks = product => state.setStatus==='applied'&&product.id!=='paint'
@@ -223,7 +224,7 @@ const CompleteSetModal={
     previousBodyStyle=document.body.style.cssText;
     const scrollbar=innerWidth-document.documentElement.clientWidth;
     Object.assign(document.body.style,{position:'fixed',top:`-${scrollPosition}px`,width:'100%',overflow:'hidden',paddingRight:scrollbar+'px'});
-    $('#modal-products').innerHTML=modalOptions.filter(option=>option.productId!=='grout'||groutShortage()>0).map(option=>{
+    $('#modal-products').innerHTML=modalOptions.filter(option=>optionQuantity(option)>0).map(option=>{
       const product=products[option.productId];
       return `<div class="modal-product" data-modal-id="${option.id}">${picture(product)}<div class="option-description"><div>${option.name||productTitle(product)}</div><span class="sku">202722</span></div><span class="modal-count">${optionQuantity(option)} шт</span><button class="outline choose-product" data-choice="${option.id}" aria-pressed="false" aria-label="Добавить: ${option.name||product.name}, вариант ${modalOptions.indexOf(option)+1}">Добавить</button></div>`;
     }).join('');
@@ -235,7 +236,8 @@ const CompleteSetModal={
     // Atomic transition: repeated events cannot append products or compound discounts.
     state.modalOpen=false;
     if(apply&&state.setStatus==='incomplete'){
-      const chosen=modalOptions.find(option=>option.id===state.draft.alternative).productId;
+      const chosen=state.draft.alternative
+        ?modalOptions.find(option=>option.id===state.draft.alternative).productId:state.appliedChoice;
       const other=chosen==='glue'?'plaster':'glue';
       state.quantities[other]=0;
       state.cartProductIds=['grout',chosen,'paint'];
